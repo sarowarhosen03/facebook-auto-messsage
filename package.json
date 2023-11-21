@@ -3,10 +3,13 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "start": "node index.mjs"
+    "dev": "npx tsc && node ./dist/index.mjs",
+    "start": "node ./dist/index.mjs",
+    "build": "tsc"
   },
   "dependencies": {
     "dotenv": "^16.3.1",
-    "puppeteer": "^21.5.2"
+    "puppeteer": "^21.5.2",
+    "typescript": "^5.3.2"
   }
 }
