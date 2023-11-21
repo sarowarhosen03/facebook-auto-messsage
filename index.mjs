@@ -165,13 +165,16 @@ async function login() {
 
     if (await isNeedLoginApproval()) {
       console.log('please aprove login');
-
+      isCheckPoint = true;
       page.on('framenavigated', async (frame) => {
-        if (
-          !frame.url().includes('https://www.facebook.com/checkpoint/?next')
-        ) {
-          console.log('checkpoint passed');
-          resolve(true);
+        if (isCheckPoint) {
+          if (
+            !frame.url().includes('https://www.facebook.com/checkpoint/?next')
+          ) {
+            console.log('checkpoint passed');
+            isCheckPoint = false;
+            return resolve(true);
+          }
         }
       });
     } else {
@@ -180,17 +183,6 @@ async function login() {
   });
 }
 
-function saveCookies(cookies) {
-  if (!cookies) cookies = [];
-  fs.writeFileSync('cookies.json', JSON.stringify(cookies));
-}
-function getCookies() {
-  try {
-    return JSON.parse(fs.readFileSync('cookies.json'));
-  } catch (e) {
-    return [];
-  }
-}
 async function isNeedLoginApproval() {
   return await page.url().includes('https://www.facebook.com/checkpoint/?next');
 }
