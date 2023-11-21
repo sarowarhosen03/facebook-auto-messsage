@@ -1,7 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import puppeteer from 'puppeteer';
 import fs from 'fs';
 import Readline from 'readline';
-
 let isCheckPoint = false;
 //lunche the default browser window
 const browser = await puppeteer.launch({
@@ -14,34 +15,37 @@ await page.goto('https://facebook.com', {
   waitUntil: 'networkidle2',
 });
 //await page.click('#mount_0_0_pQ > div > div:nth-child(1) > div > div.x9f619.x1n2onr6.x1ja2u2z > div > div > div > div.x78zum5.xdt5ytf.x1t2pt76.x1n2onr6.x1ja2u2z.x10cihs4 > div.x9f619.x2lah0s.x1nhvcw1.x1qjc9v5.xozqiw3.x1q0g3np.x78zum5.x1iyjqo2.x1t2pt76.x1n2onr6.x1ja2u2z > div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div > div > div > div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div:nth-child(2) > div > span:nth-child(3) > div')
-await login();
-//geting target userid form user
-const userId = await getUserId();
-await page.goto(`https://www.facebook.com/messages/t/${userId}`, {
-  waitUntil: 'networkidle2',
-});
+const loginDone = await login();
+if (loginDone) startAction();
+async function startAction() {
+  //geting target userid form user
+  const userId = await getUserId();
+  await page.goto(`https://www.facebook.com/messages/t/${userId}`, {
+    waitUntil: 'networkidle2',
+  });
 
-const action = await getTheAction();
-let message = action === 2 ? await getMessage() : '';
-let howManyTime = await getHowManyTime();
-console.log('Sending');
-process.stdout.write(`\r${howManyTime}`);
-while (howManyTime > 0) {
-  if (action === 1) {
-    await sendLike();
-  } else {
-    await sendMessage(message);
-  }
-
-  await sleep(1000);
+  const action = await getTheAction();
+  let message = action === 2 ? await getMessage() : '';
+  let howManyTime = await getHowManyTime();
+  console.log('Sending');
   process.stdout.write(`\r${howManyTime}`);
+  while (howManyTime > 0) {
+    if (action === 1) {
+      await sendLike();
+    } else {
+      await sendMessage(message);
+    }
 
-  howManyTime--;
+    await sleep(1000);
+    process.stdout.write(`\r${howManyTime}`);
+
+    howManyTime--;
+  }
+  process.stdout.clearLine();
+  console.log('\n finished ');
+  sleep(2000);
+  browser.close();
 }
-process.stdout.clearLine();
-console.log('\n finished ');
-sleep(2000);
-browser.close();
 
 async function getMessage() {
   const readline2 = Readline.createInterface({
@@ -140,49 +144,52 @@ function sleep(ms) {
 }
 
 async function login() {
-  const data = await page.cookies('https://www.facebook.com/');
-  const c_user = data.find((cookie) => cookie.name === 'c_user');
-  const savedCookies = getCookies();
-  const saved_c_user =
-    savedCookies.find((cookie) => cookie.name === 'c_user') || '';
-  if (saved_c_user.value === c_user.value) {
-    //already login
-    return;
-  }
+  return new Promise(async (resolve, rejects) => {
+    const data = await page.cookies('https://www.facebook.com/');
+    const c_user = data.find((cookie) => cookie.name === 'c_user');
 
-  //
-
-  //need to login
-  await page.type('#email', process.env.userName);
-  await page.type('#pass', process.env.password);
-
-  await page.keyboard.press('Enter');
-  await page.waitForNavigation();
-  if (await isNeedLoginApproval()) {
-    console.log('please aprove login');
-    isCheckPoint = true;
-    return;
-  }
-
-  await saveCookies(await page.cookies());
-}
-
-page.on('framenavigated', async (frame) => {
-  if (isCheckPoint) {
-    if (!frame.url().includes('https://www.facebook.com/checkpoint/?next')) {
-      console.log('checkpoint passed');
-      isCheckPoint = false;
-      saveCookies(await page.cookies());
+    if (c_user?.value) {
+      console.log('already login');
+      return resolve(true);
     }
-  }
-});
+
+    //
+
+    //need to login
+    console.log('need to login', process.env.userName);
+    await page.type('#email', process.env.userName);
+    await page.type('#pass', process.env.password);
+
+    await page.keyboard.press('Enter');
+    await page.waitForNavigation();
+
+    if (await isNeedLoginApproval()) {
+      console.log('please aprove login');
+
+      page.on('framenavigated', async (frame) => {
+        if (
+          !frame.url().includes('https://www.facebook.com/checkpoint/?next')
+        ) {
+          console.log('checkpoint passed');
+          resolve(true);
+        }
+      });
+    } else {
+      resolve();
+    }
+  });
+}
 
 function saveCookies(cookies) {
   if (!cookies) cookies = [];
   fs.writeFileSync('cookies.json', JSON.stringify(cookies));
 }
 function getCookies() {
-  return JSON.parse(fs.readFileSync('cookies.json', 'utf8'))||[];
+  try {
+    return JSON.parse(fs.readFileSync('cookies.json'));
+  } catch (e) {
+    return [];
+  }
 }
 async function isNeedLoginApproval() {
   return await page.url().includes('https://www.facebook.com/checkpoint/?next');
