@@ -1,6 +1,6 @@
 {
   "name": "facebook-messsage-bot",
-  "version": "1.0.6",
+  "version": "1.0.10",
   "description": "is a open source bot made by help of  puppeteer  ",
   "bin": {
     "facebook-messsage-bot": "./dist/index.mjs"
