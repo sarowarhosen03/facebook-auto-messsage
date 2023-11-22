@@ -5,3 +5,4 @@ package.json.bk
 .env
 tsconfig.json
 .gitignore
+src
