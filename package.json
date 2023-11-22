@@ -1,7 +1,10 @@
 {
-  "name": "fbblock",
-  "module": "index.ts",
-  "type": "module",
+  "name": "facebook-messsage-bot",
+  "version": "1.0.6",
+  "description": "is a open source bot made by help of  puppeteer  ",
+  "bin": {
+    "facebook-messsage-bot": "./dist/index.mjs"
+  },
   "scripts": {
     "dev": "npx tsc && node ./dist/index.mjs",
     "start": "node ./dist/index.mjs",
@@ -11,5 +14,8 @@
     "dotenv": "^16.3.1",
     "puppeteer": "^21.5.2",
     "typescript": "^5.3.2"
-  }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
 }
