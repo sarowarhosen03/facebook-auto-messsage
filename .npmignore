@@ -6,3 +6,7 @@ package.json.bk
 tsconfig.json
 .gitignore
 src
+headless
+head
+.env.example
+LICENSE

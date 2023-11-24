@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 import dotenv from 'dotenv';
+import puppeteer from 'puppeteer';
+import Readline from 'readline';
+import fs from 'fs';
 dotenv.config();
 const config = {
     userName: process.env.userName,
     password: process.env.password,
-    headless: false,
+    headless: true,
     action: undefined,
     message: '',
     howManyTime: undefined,
     delay: 5000,
     chatId: undefined,
 };
-import puppeteer from 'puppeteer';
-import Readline from 'readline';
 process.argv.forEach((val, index) => {
     if (val == '-u') {
         return (config.userName = process.argv[index + 1]);
@@ -41,44 +42,66 @@ process.argv.forEach((val, index) => {
         return (config.delay = Number(process.argv[index + 1]) * 1000);
     }
     if (val == '-b' || val == '-headless') {
-        return config.headless = process.argv[index + 1] == 'false';
+        return config.headless = !(process.argv[index + 1].toLowerCase() == 'true');
     }
     if (val == '-h' || val == '--help') {
-        console.log('help \n \t -u \t username (phone or Email) \n \t -p \t password (facebook Account password) \n \t -a \t action (eg 1 for liek 2 for message) \n \t -m \t message \n \t -i \t how many time number(eg 20 30 at a time max 30 recomanded) \n \t -c \t chat id number(eg 1005066375029126) \n \t -d \t delay  sec : sec (eg 5) \n \t -b \t headless true|false');
+        console.log('help \n \t -u \t username (phone or Email) \n \t -p \t password (facebook Account password) \n \t -a \t action (eg 1 for liek 2 for message) \n \t -m \t message \n \t -i \t how many time number(eg 20 30 at a time max 30 recomanded) \n \t -c \t chat id number(eg 1005066375029126) \n \t -d \t delay  sec : sec (eg 5) \n \t -b \t browser true|false');
         process.exit(0);
     }
 });
 let isCheckPoint = false;
 console.log("press 'k' to quite");
 //lunche the default browser window
-const browser = await puppeteer.launch({
-    userDataDir: '../tmp/',
-    headless: config.headless,
-});
-const page = await browser.newPage();
-page.setDefaultNavigationTimeout(0);
-page.setDefaultTimeout(0);
-await page.goto('https://facebook.com', {
-    waitUntil: 'networkidle2',
-});
-//await page.click('#mount_0_0_pQ > div > div:nth-child(1) > div > div.x9f619.x1n2onr6.x1ja2u2z > div > div > div > div.x78zum5.xdt5ytf.x1t2pt76.x1n2onr6.x1ja2u2z.x10cihs4 > div.x9f619.x2lah0s.x1nhvcw1.x1qjc9v5.xozqiw3.x1q0g3np.x78zum5.x1iyjqo2.x1t2pt76.x1n2onr6.x1ja2u2z > div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div > div > div > div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div:nth-child(2) > div > span:nth-child(3) > div')
-const loginDone = await login();
-if (loginDone) {
-    //geting target userid form user
-    if (!(config === null || config === void 0 ? void 0 : config.chatId)) {
-        config.chatId = await getChatId();
+let browser = null;
+try {
+    if (config.headless) {
+        browser = await puppeteer.launch({
+            userDataDir: 'headless',
+            headless: 'new'
+        }).catch((e) => {
+            console.log('error ocaurd to lunche browser please try agin');
+            fs.unlinkSync('headless');
+            kill();
+        });
     }
-    //go to messenger web
-    await page.goto(`https://www.facebook.com/messages/t/${config.chatId}`, {
+    else {
+        browser = await puppeteer.launch({
+            userDataDir: 'head',
+            headless: false
+        }).catch((e) => {
+            console.log('error ocaurd to lunche browser please try agin');
+            fs.unlinkSync('head');
+            kill();
+        });
+    }
+    const page = await browser.newPage();
+    page.setDefaultNavigationTimeout(0);
+    page.setDefaultTimeout(0);
+    await page.goto('https://facebook.com', {
         waitUntil: 'networkidle2',
     });
-    await startAction();
+    //await page.click('#mount_0_0_pQ > div > div:nth-child(1) > div > div.x9f619.x1n2onr6.x1ja2u2z > div > div > div > div.x78zum5.xdt5ytf.x1t2pt76.x1n2onr6.x1ja2u2z.x10cihs4 > div.x9f619.x2lah0s.x1nhvcw1.x1qjc9v5.xozqiw3.x1q0g3np.x78zum5.x1iyjqo2.x1t2pt76.x1n2onr6.x1ja2u2z > div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div > div > div > div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div:nth-child(2) > div > span:nth-child(3) > div')
+    const loginDone = await login(page);
+    if (loginDone) {
+        //geting target userid form user
+        if (!(config === null || config === void 0 ? void 0 : config.chatId)) {
+            config.chatId = await getChatId();
+        }
+        //go to messenger web
+        await page.goto(`https://www.facebook.com/messages/t/${config.chatId}`, {
+            waitUntil: 'networkidle2',
+        });
+        await startAction(page);
+    }
 }
-async function startAction() {
+catch (e) {
+    console.log(e === null || e === void 0 ? void 0 : e.message);
+    kill();
+}
+async function startAction(page) {
     if (!(config === null || config === void 0 ? void 0 : config.action)) {
         config.action = await getTheAction();
     }
-    ;
     let message = '';
     if (config.action === 2 && (!(config === null || config === void 0 ? void 0 : config.message))) {
         message = await getMessage();
@@ -91,10 +114,10 @@ async function startAction() {
     process.stdout.write(`\r${timeToDo}`);
     while (timeToDo > 0) {
         if (config.action === 1) {
-            await sendLike();
+            await sendLike(page);
         }
         else {
-            await sendMessage(message);
+            await sendMessage(message, page);
         }
         await sleep(5000);
         process.stdout.write(`\r${timeToDo}`);
@@ -106,7 +129,7 @@ async function startAction() {
     config.action = undefined;
     config.howManyTime = undefined;
     config.message = undefined;
-    await startAction();
+    await startAction(page);
 }
 async function getMessage() {
     const readline2 = Readline.createInterface({
@@ -131,7 +154,7 @@ function getHowManyTime() {
         input: process.stdin,
         output: process.stdout,
     });
-    return new Promise((resolve, rejects) => {
+    return new Promise((resolve) => {
         readline.question('Eneter How Many Time ?', (time) => {
             if (!time || isNaN(Number(time))) {
                 return resolve(1);
@@ -172,12 +195,12 @@ function kill() {
     browser.close();
     process.exit(0);
 }
-async function sendLike() {
+async function sendLike(page) {
     await page.waitForSelector('[aria-label="Send a Like"]');
-    const sendLikebutton = await page.$('[aria-label="Send a Like"]');
+    const sendLikebutton = await page.$('[aria-label^="Send a"]');
     sendLikebutton ? await sendLikebutton.click() : console.log('sendLikeButton not found');
 }
-async function sendMessage(message) {
+async function sendMessage(message, page) {
     await page.waitForSelector('[aria-label="Message"]');
     await page.type('[aria-label="Message"]', message);
     page.keyboard.press('Enter');
@@ -207,8 +230,8 @@ function sleep(ms) {
         setTimeout(resolve, ms);
     });
 }
-async function login() {
-    return new Promise(async (resolve, rejects) => {
+async function login(page) {
+    return new Promise(async (resolve) => {
         const data = await page.cookies('https://www.facebook.com/');
         const c_user = data.find((cookie) => cookie.name === 'c_user');
         if (c_user === null || c_user === void 0 ? void 0 : c_user.value) {
@@ -216,8 +239,10 @@ async function login() {
             return resolve(true);
         }
         //
-        //need to login
-        console.log('need to login', config === null || config === void 0 ? void 0 : config.userName);
+        //need to log in
+        console.log('need to login');
+        if (config === null || config === void 0 ? void 0 : config.userName)
+            console.log(config.userName);
         if (!(config === null || config === void 0 ? void 0 : config.userName)) {
             config.userName = await getUsername();
         }
@@ -232,10 +257,9 @@ async function login() {
         if (errobox) {
             const error = await page.evaluate((el) => el.textContent, errobox);
             console.log(error, "try agin with  valid cradantial");
-            browser.close();
-            process.exit(0);
+            kill();
         }
-        if (await isNeedLoginApproval()) {
+        if (await isNeedLoginApproval(page)) {
             console.log('please aprove login');
             isCheckPoint = true;
             page.on('framenavigated', async (frame) => {
@@ -260,6 +284,9 @@ async function getUsername() {
     });
     return new Promise((resolve, rejects) => {
         readline.question('Enter Your Facebook Account Email or Phone Number ? ', (userName) => {
+            if (userName == 'k') {
+                return kill();
+            }
             if (!userName) {
                 return rejects('invalid username');
             }
@@ -275,6 +302,9 @@ async function getPassword() {
     });
     return new Promise((resolve, rejects) => {
         readline.question('Enter Your Facebook Account Password ? ', (password) => {
+            if (password == 'k') {
+                return kill();
+            }
             if (!password) {
                 rejects('invalid username');
             }
@@ -283,6 +313,6 @@ async function getPassword() {
         });
     });
 }
-async function isNeedLoginApproval() {
-    return await page.url().includes('https://www.facebook.com/checkpoint/?next');
+async function isNeedLoginApproval(page) {
+    return page.url().includes('https://www.facebook.com/checkpoint/?next');
 }

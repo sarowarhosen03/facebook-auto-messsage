@@ -1,6 +1,6 @@
 {
   "name": "facebook-messsage-bot",
-  "version": "2.0.7",
+  "version": "3.0.3",
   "description": "is a open source bot made by help of  puppeteer  ",
   "bin": {
     "facebook-messsage-bot": "dist/index.mjs"
@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "npx tsc && node ./dist/index.mjs",
     "start": "node ./dist/index.mjs",
-    "build": "tsc"
+    "build": "tsc",
+    "publish-app": "npm run build && npm publish"
   },
   "dependencies": {
     "dotenv": "^16.3.1",
